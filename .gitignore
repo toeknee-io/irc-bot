@@ -1,0 +1,4 @@
+node_modules/
+last_disconnect.log
+.eslintrc.yml
+.ftpconfig

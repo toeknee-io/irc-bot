@@ -1,0 +1,32 @@
+{
+  "name": "toeknee-irc-bot",
+  "version": "1.0.0",
+  "description": "nodejs irc bot",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "eslint .",
+    "start": "pm2 start node/index.js --name 'irc-bot' && pm2 logs irc-bot",
+    "stop": "pm2 stop 'irc-bot'"
+  },
+  "keywords": [
+    "irc",
+    "bot",
+    "idle"
+  ],
+  "author": "toeknee <toeknee@toeknee.io> (http://www.toeknee.io)",
+  "license": "ISC",
+  "dependencies": {
+    "irc": "0.5.2",
+    "lodash": "4.17.4"
+  },
+  "devDependencies": {
+    "eslint": "^3.11.0",
+    "eslint-config-airbnb": "^13.0.0",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-jsx-a11y": "^3.0.1",
+    "eslint-plugin-react": "^6.7.1"
+  }
+}
