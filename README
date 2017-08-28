@@ -14,6 +14,7 @@ conf.json example:
       "realName": "????",
       "autoConnect": true,
       "autoRejoin": true,
+      "floodProtection": false,
       "retryCount": 100,
       "retryDelay": 10000,
       "encoding": "UTF-8"

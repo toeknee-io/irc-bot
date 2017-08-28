@@ -11,20 +11,22 @@ const lastDisc = _.attempt(() => _.toNumber(fs.readFileSync(C.FILE_LAST_DISCONNE
 
 let i = 0;
 
-if (!_.isError(lastDisc) && lastDisc > (Date.now() - 10000)) {
-  console.log(`last disconnect was less than 30 seconds ago (${lastDisc}), exiting`);
+if (!_.isError(lastDisc) && lastDisc > (Date.now() - 5000)) {
+  console.log(`last disconnect was less than 5 seconds ago (${lastDisc}), exiting`);
   process.exit(1);
 }
 
 const client = new irc.Client(C.IRC_SERVER_NAME, C.USERNAME_LOGIN, C.IRC_SERVER_OPTS);
 const util = new Utilities(client);
 
+const ircChannelUsers = {};
+
 client.addListener('error', message => console.error(`[ERROR] ${console.dir(message)}`));
 
 client.addListener('motd', motd => console.log(`[MOTD] ${motd}`));
 
 client.addListener('notice', (from, to, message) => {
-  console.log(`[NOTICE] ${from || 'Unknown'} => ${to === C.USERNAME_TOEKNEE ? 'Me' : to}: ${message}`);
+  console.log(`[NOTICE] ${from || 'Unknown'} => ${to === C.USERNAME_LOGIN ? 'Me' : to}: ${message}`);
   if (Utilities.isFromPre(from)) {
     if (message === C.MSG_NEED_TO_IDENTIFY) {
       console.log('pretome acct was not recognized');
@@ -33,6 +35,7 @@ client.addListener('notice', (from, to, message) => {
       console.log('pretome acct was successfully recognized');
       util.joinChannel(C.CHANNEL_NAME_PRETOME);
       util.joinChannel(C.CHANNEL_NAME_IDLE_RPG);
+      util.joinChannel(C.CHANNEL_NAME_ANNOUNCE);
     }
   }
 });
@@ -53,18 +56,25 @@ client.addListener('message', (from, to, message) => {
   }
 });
 
+client.addListener('names', (ch, nicks) => {
+  ircChannelUsers[ch] = nicks;
+  console.log(`[${ch}] nicks:`, nicks);
+});
+
 client.addListener('action', (from, to, text) => console.log(`[${to}] ${from} ${text}`));
 
 client.addListener('nick', (oldNick, newNick) => console.log(`${oldNick} changed nickname to: ${newNick}`));
-client.addListener('topic', (channel, topic, user) => console.log(`[${channel}] ${user} set topic to: ${topic}`));
+client.addListener('topic', (ch, topic, user) => console.log(`[${ch}] ${user} set topic to: ${topic}`));
 
-client.addListener('join', (channel, user) => console.log(`${user} joined channel ${channel}`));
+client.addListener('join', (ch, user) => console.log(`${user} joined channel ${ch}`));
 
-client.addListener('part', (channel, user, reason) => console.log(`${user} left ${channel}: ${reason}`));
-client.addListener('kick', (channel, user, by, reason) => console.log(`${user} kicked from ${channel} by ${by}: ${reason}`));
+client.addListener('part', (ch, user, reason) => console.log(`${user} left channel ${ch}: ${reason}`));
+client.addListener('kick', (ch, user, by, reason) => console.log(`${user} kicked from ${ch} by ${by}: ${reason}`));
 
 client.addListener('quit', (user, reason) => console.log(`${user} quit IRC: ${reason}`));
 client.addListener('kill', (user, reason) => console.log(`${user} disconnected by server: ${reason}`));
+
+['+', '-'].forEach(a => client.addListener(`${a}mode`, (ch, by, mode, arg) => console.log(`[${ch}] mode change: ${by} set ${a}${mode} for ${arg}`)));
 
 const server = net.createServer((s) => {
   s.setEncoding('utf8');
@@ -91,7 +101,7 @@ const server = net.createServer((s) => {
 
       client.send(cmd, arg1, arg2, arg3);
     } else if (d.startsWith('server_connCount')) {
-      server.getConnections((err, count) => console.log(`connCount: ${count}`));
+      server.getConnections((err, count) => console.log(`socket connections: ${count}`));
     } else if (d === 'exit') {
       s.end();
     } else {
