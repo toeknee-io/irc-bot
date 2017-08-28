@@ -11,14 +11,12 @@ const lastDisc = _.attempt(() => _.toNumber(fs.readFileSync(C.FILE_LAST_DISCONNE
 
 let i = 0;
 
-console.log(`last disc ${lastDisc}`);
+if (!_.isError(lastDisc) && lastDisc > (Date.now() - 10000)) {
+  console.log(`last disconnect was less than 30 seconds ago (${lastDisc}), exiting`);
+  process.exit(1);
+}
 
-// if (!_.isError(lastDisc) && lastDisc > (Date.now() - 10000)) {
-//   console.log(`last disconnect was less than 30 seconds ago (${lastDisc}), exiting`);
-//   process.exit(1);
-// }
-
-const client = new irc.Client(C.IRC_SERVER_NAME, C.USERNAME_TOEKNEE, C.IRC_SERVER_OPTS);
+const client = new irc.Client(C.IRC_SERVER_NAME, C.USERNAME_LOGIN, C.IRC_SERVER_OPTS);
 const util = new Utilities(client);
 
 client.addListener('error', message => console.error(`[ERROR] ${console.dir(message)}`));
@@ -94,6 +92,8 @@ const server = net.createServer((s) => {
       client.send(cmd, arg1, arg2, arg3);
     } else if (d.startsWith('server_connCount')) {
       server.getConnections((err, count) => console.log(`connCount: ${count}`));
+    } else if (d === 'exit') {
+      s.end();
     } else {
       console.log(`received unsupported socket cmd: ${d}`);
     }
@@ -109,8 +109,8 @@ server.on('error', (e) => {
   }
 });
 
-server.on('listening', () => console.log(`socket server listening to ${server.address()}`));
-server.on('close', () => console.log(`socket server stopped listening to ${server.address()}`));
+server.on('listening', () => console.log('socket server listening to', server.address()));
+server.on('close', () => console.log('socket server stopped listening to', server.address()));
 
 server.listen({ port: SOCKET_PORT, host: 'localhost' });
 

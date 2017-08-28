@@ -1,0 +1,23 @@
+Uses node-irc client: https://node-irc.readthedocs.io/en/latest/index.html
+
+A 'conf' folder should be created in the root directory and it should contain a 'conf.json' file.
+
+conf.json example:
+
+{
+  "irc": {
+    "server": "irc.pretome.info",
+    "username": "PreToMeUserName",
+    "password": "NickServIdentifyPassword",
+    "opts": {
+      "userName": "PreToMeUserName",
+      "realName": "????",
+      "autoConnect": true,
+      "autoRejoin": true,
+      "retryCount": 100,
+      "retryDelay": 10000,
+      "encoding": "UTF-8"
+    },
+    "lastDisconnectFile": "last_disconnect.log"
+  }
+}
