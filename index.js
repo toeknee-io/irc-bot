@@ -1,11 +1,15 @@
 const fs = require('fs');
+const net = require('net');
 const irc = require('irc');
 const _ = require('lodash');
 
 const C = require('./lib/constants.js');
 const Utilities = require('./lib/util.js');
 
+const SOCKET_PORT = 1122;
 const lastDisc = _.attempt(() => _.toNumber(fs.readFileSync(C.FILE_LAST_DISCONNECT, 'utf8')));
+
+let i = 0;
 
 console.log(`last disc ${lastDisc}`);
 
@@ -16,17 +20,6 @@ console.log(`last disc ${lastDisc}`);
 
 const client = new irc.Client(C.IRC_SERVER_NAME, C.USERNAME_TOEKNEE, C.IRC_SERVER_OPTS);
 const util = new Utilities(client);
-
-process.on('exit', () => {
-  console.log('disconnecting from irc and exiting');
-});
-
-process.on('SIGINT', () => {
-  client.disconnect(() => {
-    fs.writeFileSync(C.FILE_LAST_DISCONNECT, Date.now(), 'utf8');
-    process.exit(0);
-  });
-});
 
 client.addListener('error', message => console.error(`[ERROR] ${console.dir(message)}`));
 
@@ -74,6 +67,62 @@ client.addListener('kick', (channel, user, by, reason) => console.log(`${user} k
 
 client.addListener('quit', (user, reason) => console.log(`${user} quit IRC: ${reason}`));
 client.addListener('kill', (user, reason) => console.log(`${user} disconnected by server: ${reason}`));
+
+const server = net.createServer((s) => {
+  s.setEncoding('utf8');
+
+  s.on('data', (data) => {
+    const d = data.trim();
+
+    if (d.startsWith('say')) {
+      const target = d.split(/\s/)[1];
+      const message = d.split(target)[1];
+
+      if (typeof target === 'string' && typeof message === 'string') {
+        util.sendMsg(target.trim(), message.trim());
+      }
+    } else if (d.startsWith('join')) {
+      util.joinChannel(d.split(/\s/)[1]);
+    } else if (d.startsWith('raw')) {
+      const cmdArray = d.split(/\s/);
+
+      const cmd = cmdArray[1];
+      const arg1 = cmdArray[2];
+      const arg2 = cmdArray[3];
+      const arg3 = cmdArray[4];
+
+      client.send(cmd, arg1, arg2, arg3);
+    } else if (d.startsWith('server_connCount')) {
+      server.getConnections((err, count) => console.log(`connCount: ${count}`));
+    } else {
+      console.log(`received unsupported socket cmd: ${d}`);
+    }
+  });
+});
+
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') {
+    setTimeout(() => {
+      server.close();
+      server.listen({ port: SOCKET_PORT + (i += 1), host: 'localhost' });
+    }, 250);
+  }
+});
+
+server.on('listening', () => console.log(`socket server listening to ${server.address()}`));
+server.on('close', () => console.log(`socket server stopped listening to ${server.address()}`));
+
+server.listen({ port: SOCKET_PORT, host: 'localhost' });
+
+process.on('SIGINT', () => {
+  console.log('disconnecting from irc and exiting');
+
+  client.disconnect(() => {
+    server.close();
+    fs.writeFileSync(C.FILE_LAST_DISCONNECT, Date.now(), 'utf8');
+    process.exit(0);
+  });
+});
 
 if (Utilities.debugOn()) {
   Utilities.debugLog('Debug ENABLED');
